@@ -32,8 +32,8 @@ def extract_from_youtube():
 									break
 					
 	df = pd.DataFrame(list(zip(playlists, nb_videos, date, ids)))
-	df.columns=["Playlist", "Number of videos", "Date created", "links"]
-	df['Date created'] = pd.to_datetime(df['Date created']).dt.date
+	df.columns=["title", "number_of_videos", "created_date", "playlist_url"]
+	df['created_date'] = pd.to_datetime(df['created_date']).dt.date
 
 	df.to_csv("data/crashcourse_playlists.csv", index=False)
 	print("Data extracted and saved to crashcourse_playlists.csv")
