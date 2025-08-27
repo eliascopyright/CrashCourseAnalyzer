@@ -1,5 +1,6 @@
 from googleapiclient.discovery import build
 import pandas as pd
+import streamlit as st
 API_KEY = "AIzaSyA4v7SM3a4PfpxrXfKL_nN9uEJmcZT1hH0"
 
 
@@ -34,6 +35,10 @@ def extract_from_youtube():
 	df = pd.DataFrame(list(zip(playlists, nb_videos, date, ids)))
 	df.columns=["title", "number_of_videos", "created_date", "playlist_url"]
 	df['created_date'] = pd.to_datetime(df['created_date']).dt.date
+	l = df['playlist_url']
+	df["playlist_url"] =  df["playlist_url"].apply(lambda x: f'<a href="{x}" target="_blank">Ouvrir</a>')
+	df["Details de la playlist"] = l.apply(lambda x: f'<a href="/videos?playlist={x}">Afficher les détails</a>')
+	# [st.link_button("Go to gallery", "https://streamlit.io/gallery")] 
 
 	df.to_csv("data/crashcourse_playlists.csv", index=False)
 	print("Data extracted and saved to crashcourse_playlists.csv")

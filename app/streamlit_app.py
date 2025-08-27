@@ -1,7 +1,13 @@
 import streamlit as st, os, sys
+import pandas as pd
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+#print(f"****************************************{os.listdir()}************************")
 
 from core import extract
+from components import kpis
+from components import tableau
+from components import topn
+
 st.set_page_config(
 				page_title="Crash Course Analyzer",
 				page_icon="📊",
@@ -35,17 +41,6 @@ st.set_page_config(
 
 
 # app/app.py
-import sys, os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
-
-import pandas as pd
-import streamlit as st
-
-# ---- import du core ----
-from core import extract  # doit exposer get_channel_playlists() et (optionnel) count_videos()
 
 # ---- config UI ----
 st.set_page_config(page_title="CrashCourse Playlists Analyzer", page_icon="🎬", layout="wide")
@@ -58,7 +53,7 @@ def _get_playlists_cached() -> pd.DataFrame:
     st.write(f"Colonnes extraites : {df.columns.tolist()}")
     if not isinstance(df, pd.DataFrame):
         df = pd.DataFrame(df)
-    for col in ["title", "number_of_videos", "playlist_url', 'created_date"]:
+    for col in ["title", "number_of_videos", "playlist_url", "created_date", "Details de la playlist"]:
         if col not in df.columns:
             df[col] = None
     df["title"] = df["title"].fillna("").str.strip()
@@ -73,6 +68,7 @@ def _count_one(url_or_id: str) -> int | None:
         return None
     except Exception:
         return None
+    
 
    
 # ---- sidebar ----
@@ -81,7 +77,7 @@ with st.sidebar:
     url = st.text_input(
         "URL de l’onglet Playlists",
         value="https://www.youtube.com/channel/UCX6b17PVsYBQ0ip5gyeme-Q/",
-        help="Colle l’URL /@handle/playlists ou /channel/UC.../playlists",
+        help="Colle l’URL /channel/UC....",
     )
     do_count = st.toggle("Compter les vidéos par playlist", value=True)
     top_n = st.number_input("Top N (par nb de vidéos)", min_value=1, value=20, step=1)
@@ -126,6 +122,7 @@ with colC:
 df_view = df.copy()
 if q:
     df_view = df_view[df_view["title"].str.contains(q, case=False, na=False)]
+    
 
 if has_count == "Avec compteur":
     df_view = df_view[df_view["number_of_videos"].notna()]
@@ -138,32 +135,14 @@ if sort_mode.startswith("Par nb vidéos") and df_view["number_of_videos"].notna(
 else:
     df_view = df_view.sort_values("title")
 
-# KPIs
-total_playlists = len(df_view)
-total_videos = int(df_view["number_of_videos"].fillna(0).sum())
-c1, c2, c3 = st.columns(3)
-c1.metric("Playlists", f"{total_playlists}")
-c2.metric("Vidéos (somme)", f"{total_videos:,}".replace(",", " "))
-c3.metric("Source", "core.extract")
+kpis.print_kpis(df_view)
 
 st.divider()
+tableau.show_table(df_view)
 
-# tableau
-st.subheader("Tableau des playlists")
-show_cols = ["title", "number_of_videos", "playlist_url", "created_date"]
-for c in show_cols:
-    if c not in df_view.columns:
-        df_view[c] = None
-st.dataframe(df_view[show_cols].reset_index(drop=True), use_container_width=True)
-
-# top N chart
-if df_view["number_of_videos"].notna().any():
-    st.subheader(f"Top {min(top_n, len(df_view))} playlists par nombre de vidéos")
-    top_df = df_view.dropna(subset=["number_of_videos"]).nlargest(int(top_n), "number_of_videos")[["title", "number_of_videos"]]
-    top_df = top_df.set_index("title")
-    st.bar_chart(top_df)
+topn.topnchart(df_view, top_n)
 
 # export
-csv = df_view[show_cols].to_csv(index=False).encode("utf-8")
-st.download_button("💾 Télécharger CSV", data=csv, file_name="playlists.csv", mime="text/csv")
+# csv = df_view[show_cols].to_csv(index=False).encode("utf-8")
+# st.download_button("💾 Télécharger CSV", data=csv, file_name="playlists.csv", mime="text/csv")
 
