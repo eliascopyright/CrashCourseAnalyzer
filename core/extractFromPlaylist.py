@@ -96,7 +96,11 @@ result = cleanDescriptions(desc)
 def UrlToDataFrame(url: str) -> pd.DataFrame:
     # ... parse playlist_id ...
     videos, page_token = [], None
-    playlist_id = url.split("=")[1]
+    try:
+        playlist_id = url.split("=")[1]
+    except:
+        print(url)
+        
     while True:
         res = youtube.playlistItems().list(
             part="snippet,contentDetails",
