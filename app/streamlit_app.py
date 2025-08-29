@@ -3,7 +3,7 @@ import pandas as pd
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 #print(f"****************************************{os.listdir()}************************")
 
-from core import extract
+from core import extractFromChannel
 from components import kpis
 from components import tableau
 from components import topn
@@ -25,7 +25,7 @@ st.set_page_config(
 
 # if st.button("Extract Data from YouTube"):
 # 	with st.spinner("Extracting data..."):
-# 		df = extract.extract_from_youtube()
+# 		df = extract.extractPlaylistsFromChannel()
 # 		st.success("Data extracted successfully!")
 
 # 	with first_container:
@@ -48,7 +48,7 @@ st.set_page_config(page_title="CrashCourse Playlists Analyzer", page_icon="🎬"
 # ---- helpers cache ----
 @st.cache_data
 def _get_playlists_cached() -> pd.DataFrame:
-    df = extract.extract_from_youtube()
+    df = extractFromChannel.extractPlaylistsFromChannel()
     # hygiène
     st.write(f"Colonnes extraites : {df.columns.tolist()}")
     if not isinstance(df, pd.DataFrame):
@@ -62,8 +62,8 @@ def _get_playlists_cached() -> pd.DataFrame:
 
 def _count_one(url_or_id: str) -> int | None:
     try:
-        if hasattr(extract, "count_videos"):
-            return extract.count_videos(url_or_id)
+        if hasattr(extractFromChannel, "count_videos"):
+            return extractFromChannel.count_videos(url_or_id)
         # fallback: si pas de fonction dispo, renvoie None (la colonne restera vide)
         return None
     except Exception:
