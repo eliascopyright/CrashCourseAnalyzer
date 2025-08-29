@@ -45,7 +45,7 @@ CC Kids: http://www.youtube.com/crashcoursekids
 youtube = build("youtube", "v3", developerKey=API_KEY)
 import re
 
-def extractDescriptionFromPlaylist(desc: str):
+def cleanDescriptions(desc: str):
     # 1) Les deux liens Google Docs
     prefix = re.escape("https://docs.google.com/")
     gdocs_links = re.findall(prefix + r'[^\s)"]+', desc)            
@@ -65,21 +65,20 @@ def extractDescriptionFromPlaylist(desc: str):
 
     # 3) Garder l’intro (du début jusqu’au premier chapitre)
     ts_re = re.compile(r'(?<!\d)(?:\d{1,2}:)?\d{1,2}:\d{2}(?!\d)')  # 0:52, 10:42, 1:02:10
-    lines = desc_clean.splitlines()
-    chapters = []
-    for ln in lines:
-        m = ts_re.search(ln)
-        if not m:
-            continue
-        t = m.group(0)                         # ex: 3:21
-        title = ln[:m.start()].strip(" -–—:")  # tout avant le time
-        if not title:                          # parfois le time est au début
-            title = ln[m.end():].strip(" -–—:")
-        chapters.append({"title": title, "time": t})
-
-    # 4) Extraire les chapitres (lignes qui contiennent un timestamp)
-    chapters = [ln.strip() for ln in lines if ts_re.search(ln)]
-
+    lines = desc_clean.replace("\r\n","\n").replace("\r","\n").splitlines()
+    # print(f'\nhey there {list(ts_re.findall(desc_clean))}')
+    chapters = [ln.strip() for ln in desc_clean.splitlines() if ts_re.search(ln)]
+    for element in chapters: 
+        element = element[::-5]
+        # print(f"element je suis {element}")
+    # 1) index du 1er chapitre
+    m = list(ts_re.finditer(desc_clean))
+    if not m:
+        intro    = desc_clean.strip()
+        # chapters = []
+    else:
+        intro    = desc_clean[:m[0].start()].strip()
+        rest     = desc_clean[m[0].start():]
     return {
         "gdocs_links": gdocs_links,
         "intro": intro,
@@ -87,11 +86,11 @@ def extractDescriptionFromPlaylist(desc: str):
     }
 
 # --- Exemple d'usage
-result = extractDescriptionFromPlaylist(desc)
-print("Links:", result["gdocs_links"])
-print("\nIntro:\n", result["intro"])
-print("\nChapters:")
-print("\n".join(result["chapters"]))
+result = cleanDescriptions(desc)
+# print("Links:", result["gdocs_links"])
+# print("\nIntro:\n", result["intro"])
+# print("\nChapters:")
+# print("\n".join(result["chapters"]))
 
 # 3) Appeler playlistItems.list pour lister TOUTES les vidéos (paginer avec nextPageToken)
 def UrlToDataFrame(url: str) -> pd.DataFrame:
@@ -108,12 +107,12 @@ def UrlToDataFrame(url: str) -> pd.DataFrame:
             vid = it["contentDetails"].get("videoId")
             if vid:
                 videos.append({
-                    "title": it["snippet"]["title"],
+                    "Title": it["snippet"]["title"],
                     "videoId": vid,
                     "position": it["snippet"].get("position"),
                     "publishedAt": it["contentDetails"].get("videoPublishedAt"),
                     "videoUrl": f"https://www.youtube.com/watch?v={vid}",
-                    "descriptions": it["snippet"]["description"],
+                    "descriptions": cleanDescriptions(it["snippet"]["description"])['intro'],
                 })
 
         page_token = res.get("nextPageToken")
@@ -148,11 +147,14 @@ def UrlToDataFrame(url: str) -> pd.DataFrame:
         lambda x: str(datetime.timedelta(seconds=int(x))) if pd.notnull(x) else None
     )
     df['descriptions'] = df['descriptions'].str.replace('\n', '<br>')
+    df.drop('durationSeconds', axis = 1, inplace = True)
     df.drop('videoId', axis = 1, inplace = True)
     
     df["videoUrl"] = df["videoUrl"].apply(lambda x: f'<a href="{x}" target="_blank">Ouvrir</a>')
     if "position" in df.columns:
         df = df.sort_values("position").reset_index(drop=True)
+    df.drop('duration', axis = 1, inplace = True)
+    
     return df
 
 # 4) (Option) récupérer la durée des vidéos (videos.list avec contentDetails)
@@ -185,8 +187,14 @@ def getDescriptionFromPlaylist(url: str) -> str:
     description = res['items'][0]['snippet']['description']
 
     return description
-
+def miniatureFromPlaylist(url:str) ->str:
+    playlist_id = url.split('=')[1]
+    req  = youtube.playlists().list(
+    id = playlist_id,
+    part = 'snippet, contentDetails')
+    res = req.execute()
+    image = res['items'][0]['snippet']['thumbnails']['high']['url']
+    return image
 
  
 df = UrlToDataFrame("https://www.youtube.com/playlist?list=PL8dPuuaLjXtNNaritQa7QqwEJeQHH0TxX")
-
