@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit as st,datetime
 import pandas as pd
 
 def print_kpis(df_view : pd.DataFrame):
@@ -8,4 +8,3 @@ def print_kpis(df_view : pd.DataFrame):
 	c1, c2, c3 = st.columns(3)
 	c1.metric("Playlists", f"{total_playlists}")
 	c2.metric("Vidéos (somme)", f"{total_videos:,}".replace(",", " "))
-	c3.metric("Source", "core.extract")

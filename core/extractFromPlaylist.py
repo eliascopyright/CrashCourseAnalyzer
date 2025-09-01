@@ -1,5 +1,6 @@
 # junior_playlist_videos.py
 import re, datetime
+import streamlit as st
 from urllib.parse import urlparse, parse_qs
 import pandas as pd, os, sys
 from googleapiclient.discovery import build
@@ -92,15 +93,22 @@ result = cleanDescriptions(desc)
 # print("\nChapters:")
 # print("\n".join(result["chapters"]))
 
+def parse_playlist_id(url : str) -> str | None:
+    try:
+        q = parse_qs(urlparse(url).query)
+        st.write((q.get('list') or None)[0])
+        return (q.get('list') or None)[0]
+    except Exception:
+        return None
 # 3) Appeler playlistItems.list pour lister TOUTES les vidéos (paginer avec nextPageToken)
-def UrlToDataFrame(url: str) -> pd.DataFrame:
+def UrlToDataFrame(url: str) -> tuple[pd.DataFrame, float]:
     # ... parse playlist_id ...
     videos, page_token = [], None
-    try:
-        playlist_id = url.split("=")[1]
-    except:
-        print(url)
-        
+    playlist_id = parse_playlist_id(url)
+    if not playlist_id:
+        raise ValueError(f"Playlist ID introuvable dans l'URL (attendu ?list=PL...)URL passée: {url}")
+
+    
     while True:
         res = youtube.playlistItems().list(
             part="snippet,contentDetails",
@@ -124,7 +132,7 @@ def UrlToDataFrame(url: str) -> pd.DataFrame:
         
         if not page_token:
             break
-
+            
     # ---- calcul des durées (après la collecte complète) ----
     if videos:
         ids = [v["videoId"] for v in videos]
@@ -153,18 +161,22 @@ def UrlToDataFrame(url: str) -> pd.DataFrame:
         lambda x: str(datetime.timedelta(seconds=int(x))) if pd.notnull(x) else None
     )
     df['descriptions'] = df['descriptions'].str.replace('\n', '<br>')
+    total_seconds = df['durationSeconds'].sum()
+    total_playlist_time = str(datetime.timedelta(seconds = float(total_seconds)))
     df.drop('durationSeconds', axis = 1, inplace = True)
     df.drop('videoId', axis = 1, inplace = True)
     
     df["videoUrl"] = df["videoUrl"].apply(lambda x: f'<a href="{x}" target="_blank">Ouvrir</a>')
     df['miniature'] = df['miniature'].apply(lambda image: f'<img src="{image}">')
-    
+
     if "position" in df.columns:
         df = df.sort_values("position").reset_index(drop=True)
     df.drop('duration', axis = 1, inplace = True)
-    print(df.columns)
-    return df
-
+    return df , total_playlist_time
+    
+        
+    
+ 
 # 4) (Option) récupérer la durée des vidéos (videos.list avec contentDetails)
 #    Simple: on boucle par paquets de 50 IDs (limite API)
 def iso_to_seconds(iso):
@@ -205,4 +217,9 @@ def miniatureFromPlaylist(url:str) ->str:
     return image
 
  
-df = UrlToDataFrame("https://www.youtube.com/playlist?list=PL8dPuuaLjXtNNaritQa7QqwEJeQHH0TxX")
+# url ="https://www.youtube.com/playlist?list=PL8dPuuaLjXtNNaritQa7QqwEJeQHH0TxX"
+
+# df = UrlToDataFrame(url)[0]
+# image = miniatureFromPlaylist(url)
+# description_playlist = getDescriptionFromPlaylist(url)
+# sources = f'<a href="{cleanDescriptions(url)["gdocs_links"]}" target=_blank> Sources</a>'
