@@ -115,11 +115,13 @@ def UrlToDataFrame(url: str) -> pd.DataFrame:
                     "videoId": vid,
                     "position": it["snippet"].get("position"),
                     "publishedAt": it["contentDetails"].get("videoPublishedAt"),
+                    'miniature': it['snippet']['thumbnails']['medium']["url"],
                     "videoUrl": f"https://www.youtube.com/watch?v={vid}",
                     "descriptions": cleanDescriptions(it["snippet"]["description"])['intro'],
                 })
 
         page_token = res.get("nextPageToken")
+        
         if not page_token:
             break
 
@@ -155,10 +157,12 @@ def UrlToDataFrame(url: str) -> pd.DataFrame:
     df.drop('videoId', axis = 1, inplace = True)
     
     df["videoUrl"] = df["videoUrl"].apply(lambda x: f'<a href="{x}" target="_blank">Ouvrir</a>')
+    df['miniature'] = df['miniature'].apply(lambda image: f'<img src="{image}">')
+    
     if "position" in df.columns:
         df = df.sort_values("position").reset_index(drop=True)
     df.drop('duration', axis = 1, inplace = True)
-    
+    print(df.columns)
     return df
 
 # 4) (Option) récupérer la durée des vidéos (videos.list avec contentDetails)
