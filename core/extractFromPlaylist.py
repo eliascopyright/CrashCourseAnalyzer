@@ -47,6 +47,8 @@ youtube = build("youtube", "v3", developerKey=API_KEY)
 import re
 
 def cleanDescriptions(desc: str):
+    
+    
     # 1) Les deux liens Google Docs
     prefix = re.escape("https://docs.google.com/")
     gdocs_links = re.findall(prefix + r'[^\s)"]+', desc)            
@@ -96,7 +98,6 @@ result = cleanDescriptions(desc)
 def parse_playlist_id(url : str) -> str | None:
     try:
         q = parse_qs(urlparse(url).query)
-        st.write((q.get('list') or None)[0])
         return (q.get('list') or None)[0]
     except Exception:
         return None
@@ -167,6 +168,7 @@ def UrlToDataFrame(url: str) -> tuple[pd.DataFrame, float]:
     df.drop('videoId', axis = 1, inplace = True)
     
     df["videoUrl"] = df["videoUrl"].apply(lambda x: f'<a href="{x}" target="_blank">Ouvrir</a>')
+    
     df['miniature'] = df['miniature'].apply(lambda image: f'<img src="{image}">')
 
     if "position" in df.columns:
@@ -217,9 +219,7 @@ def miniatureFromPlaylist(url:str) ->str:
     return image
 
  
-# url ="https://www.youtube.com/playlist?list=PL8dPuuaLjXtNNaritQa7QqwEJeQHH0TxX"
-
-# df = UrlToDataFrame(url)[0]
-# image = miniatureFromPlaylist(url)
-# description_playlist = getDescriptionFromPlaylist(url)
-# sources = f'<a href="{cleanDescriptions(url)["gdocs_links"]}" target=_blank> Sources</a>'
+url ="https://www.youtube.com/playlist?list=PL8dPuuaLjXtNNaritQa7QqwEJeQHH0TxX"
+df = UrlToDataFrame(url)[0]
+desc = df['descriptions']
+sources = f'<a href="{cleanDescriptions(desc[0])["gdocs_links"][0]}" target=_blank> Sources</a>'

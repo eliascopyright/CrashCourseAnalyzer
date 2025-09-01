@@ -10,6 +10,11 @@ st.set_page_config(
    layout="wide",
    initial_sidebar_state="expanded"
 )
+
+## Sidebar
+
+
+  
 st.markdown("""
  <style>
  svg[data-testid="stFileUploaderIcon"] {
@@ -49,49 +54,43 @@ def getURL(params):
   
 url = st.chat_input("URL de la playlist à analyser :", key="url")
 if url:
-  # st.title(params.playlist)
-
-  # extract_videos_from_playlists.PlaylistToVideos(params['playlist'])
-  df = extractFromPlaylist.UrlToDataFrame(url)[0]
+  
+  df, totaltime = extractFromPlaylist.UrlToDataFrame(url)
   image = extractFromPlaylist.miniatureFromPlaylist(url)
   description_playlist = extractFromPlaylist.getDescriptionFromPlaylist(url)
-  sources = f'<a href="{extractFromPlaylist.cleanDescriptions(url)["gdocs_links"]}" target=_blank> Sources</a>'
+  sources = f'<a href="{extractFromPlaylist.cleanDescriptions(df['descriptions'][0])["gdocs_links"][0]}" target=_blank> Get to the Academic course sources</a>'
   # description de la playlist  pour la mettre dans une carte (metric)
 
   description_container = st.container(
-    border = True,
-    horizontal=True
-    
+  border = True,
+  horizontal=True
   )
   sources_container = st.container(
-    
+  border = True
+  )
+
+  cards_container = st.container(
+    border = True
   )
   table_container = st.container(
-    horizontal= True
+  horizontal= True  
   )
-  cards_container = st.container(
-    horizontal = True
-  )
+
+
+
   with description_container:
-    
     st.markdown(f'<img src="{image}">', unsafe_allow_html=True)
-    st.write(description_playlist)
 
   with sources_container:
     st.write(sources, unsafe_allow_html=True)
 
+  with cards_container:
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Nombre de vidéos", df.shape[0])
+    c2.metric("Durée de la playlist", totaltime)
+    c3.line_chart(df['publishedAt'])
   with table_container:
-    df = extractFromPlaylist.UrlToDataFrame(url)[0]
-    
     st.write(df.to_html(escape=False, index=False), unsafe_allow_html=True)
-    
-
 
  
 
-## Sidebar
-
-with st.sidebar:
- messages = st.container(height= 150)
-messages.chat_message('user').write(url)
-messages.chat_message('assistant').write(f'Echo: {url}')
